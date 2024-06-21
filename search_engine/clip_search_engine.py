@@ -43,7 +43,7 @@ class SearchEngine:
         """
         Search for the top K images that mathc the search phrase.
 
-        :param directory:
+        :param directory: Path to directory with images.
         :param semantic_search_phrase: A phrase of what the user is looking for inside one of the images
         :param top_k: Number of top matches to return.
         :return: A list of tuples containing image paths and their scores.
