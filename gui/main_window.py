@@ -1,8 +1,9 @@
 import os
+import platform
 
-from PyQt6.QtGui import QPixmap, QIcon
+from PyQt6.QtGui import QPixmap, QIcon, QCursor
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog, QListWidget, \
-    QListWidgetItem, QHBoxLayout
+    QListWidgetItem, QHBoxLayout, QMessageBox, QMenu, QApplication
 from PyQt6.QtCore import Qt
 
 from search_engine.clip_search_engine import SearchEngine
@@ -48,6 +49,9 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.search_button)
 
         self.result_list = QListWidget()
+        self.result_list.itemClicked.connect(self.open_file_explorer)
+        self.result_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.result_list.customContextMenuRequested.connect(self.show_context_menu)
         self.main_layout.addWidget(self.result_list)
 
         self.main_layout.addLayout(self.top_layout)
@@ -83,7 +87,33 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(f"{path} (Score: {score})")
             thumbnail = QPixmap(path).scaled(100, 100)
             item.setIcon(QIcon(thumbnail))
+            item.setData(Qt.ItemDataRole.UserRole, path)
             self.result_list.addItem(item)
+
+
+    def open_file_explorer(self, item):
+        path = item.data(Qt.ItemDataRole.UserRole)
+
+        if platform.system() == 'Windows':
+            os.system(f'explorer /select, "{path}"')
+        elif platform.system() == 'Darwin':
+            os.system(f'open -R "{path}"')
+        elif platform.system() == 'Linux':
+            QMessageBox.information(self, 'Info', "Your file manager does not support direct file selection on Linux.")
+        else:
+            QMessageBox.warning(self, 'Warning', 'Unsupported OS for opening file explorer.')
+
+    def show_context_menu(self, position):
+        item = self.result_list.itemAt(position)
+        if item is not None:
+            menu = QMenu()
+            copy_action = menu.addAction("Copy")
+            action = menu.exec(QCursor.pos())
+            if action == copy_action:
+                path = item.data(Qt.ItemDataRole.UserRole)
+                clipboard = QApplication.clipboard()
+                clipboard.setText(path)
+
 
     def open_settings(self):
         dialog = SettingsDialog(parent=self)
