@@ -1,13 +1,28 @@
 import os
 import platform
 
-from PyQt6.QtGui import QPixmap, QIcon, QCursor
+from PyQt6.QtGui import QPixmap, QIcon, QCursor, QMovie
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog, QListWidget, \
     QListWidgetItem, QHBoxLayout, QMessageBox, QMenu, QApplication
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from search_engine.clip_search_engine import SearchEngine
 from gui.settings_dialog import SettingsDialog
+
+
+class ImageSearchThread(QThread):
+    search_complete = pyqtSignal(list)
+
+    def __init__(self, search_engine, directory, search_phrase, top_k):
+        super().__init__()
+        self.search_engine = search_engine
+        self.directory = directory
+        self.search_phrase = search_phrase
+        self.top_k = top_k
+
+    def run(self):
+        results = self.search_engine.search_images(self.directory, self.search_phrase, top_k=self.top_k)
+        self.search_complete.emit(results)
 
 
 class MainWindow(QMainWindow):
@@ -24,7 +39,6 @@ class MainWindow(QMainWindow):
         self.settings_button = QPushButton('Settings')
         self.settings_button.clicked.connect(self.open_settings)
         self.top_layout.addWidget(self.settings_button)
-
 
         self.main_layout = QVBoxLayout(self.central_widget)
 
@@ -47,6 +61,13 @@ class MainWindow(QMainWindow):
         self.search_button = QPushButton("Search")
         self.search_button.clicked.connect(self.search_images)
         self.main_layout.addWidget(self.search_button)
+
+        self.loading_label = QLabel()
+        self.loading_movie = QMovie('icons/SearchGif.gif')
+        self.loading_label.setMovie(self.loading_movie)
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.main_layout.addWidget(self.loading_label)
+        self.loading_label.setVisible(False)
 
         self.result_list = QListWidget()
         self.result_list.itemClicked.connect(self.open_file_explorer)
@@ -78,10 +99,17 @@ class MainWindow(QMainWindow):
             self.result_list.addItem("Please enter a search phrase.")
             return
 
-        results = self.search_engine.search_images(directory, search_phrase, top_k=self.num_results)
-        self.display_results(results)
+        self.result_list.clear()
+        self.loading_label.setVisible(True)
+        self.loading_movie.start()
+
+        self.search_thread = ImageSearchThread(self.search_engine, directory, search_phrase, top_k=self.num_results)
+        self.search_thread.search_complete.connect(self.display_results)
+        self.search_thread.start()
 
     def display_results(self, results):
+        self.loading_movie.stop()
+        self.loading_label.setVisible(False)
         self.result_list.clear()
         for path, score in results:
             item = QListWidgetItem(f"{path} (Score: {score})")
@@ -89,7 +117,6 @@ class MainWindow(QMainWindow):
             item.setIcon(QIcon(thumbnail))
             item.setData(Qt.ItemDataRole.UserRole, path)
             self.result_list.addItem(item)
-
 
     def open_file_explorer(self, item):
         path = item.data(Qt.ItemDataRole.UserRole)
@@ -113,7 +140,6 @@ class MainWindow(QMainWindow):
                 path = item.data(Qt.ItemDataRole.UserRole)
                 clipboard = QApplication.clipboard()
                 clipboard.setText(path)
-
 
     def open_settings(self):
         dialog = SettingsDialog(parent=self)
