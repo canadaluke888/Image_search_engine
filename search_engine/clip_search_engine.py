@@ -10,11 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 class SearchEngine:
-    def __init__(self):
+    def __init__(self, use_cpu=False):
         """
         Initialize the CLIP model and processor.
         """
-        self.model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32')
+        self.device = torch.device('cpu' if use_cpu or not torch.cuda.is_available() else 'cuda')
+        self.model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32').to(self.device)
         self.processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
 
     def load_and_process_images(self, directory):
@@ -54,13 +55,17 @@ class SearchEngine:
 
         with torch.no_grad():
             inputs = self.processor(text=[semantic_search_phrase], images=images, return_tensors="pt",
-                                    padding=True)
+                                    padding=True).to(self.device)
             outputs = self.model(**inputs)
 
         logits_per_image = outputs.logits_per_image
         values, indices = logits_per_image.squeeze().topk(top_k)
 
-        top_image_paths = [image_paths[int(index.numpy())] for index in indices]
-        top_scores = [round(value.numpy().tolist(), 3) for value in values]
+        top_image_paths = [image_paths[int(index.cpu().numpy())] for index in indices]
+        top_scores = [round(value.cpu().numpy().tolist(), 3) for value in values]
 
         return list(zip(top_image_paths, top_scores))
+
+    @staticmethod
+    def is_cuda_available():
+        return torch.cuda.is_available()

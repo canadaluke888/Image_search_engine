@@ -1,6 +1,9 @@
 import json
 import os
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QSpinBox, QPushButton, QMessageBox, QApplication
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QSpinBox, QPushButton, QCheckBox, QMessageBox, QApplication
+
+from search_engine.clip_search_engine import SearchEngine
+
 
 class SettingsDialog(QDialog):
     def __init__(self, settings_path='settings_data/settings_data.json', parent=None):
@@ -21,34 +24,56 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.num_results_label)
         layout.addWidget(self.num_results_input)
 
+        self.cpu_checkbox = QCheckBox("Use CPU instead of GPU")
+        layout.addWidget(self.cpu_checkbox)
+
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_num_results)
+        save_button.clicked.connect(self.save_settings)
         layout.addWidget(save_button)
 
         self.setLayout(layout)
 
+        if not SearchEngine.is_cuda_available():
+            self.cpu_checkbox.hide()
+        else:
+            self.cpu_checkbox.setChecked(self.get_use_cpu_setting())
+
     def get_num_results_data(self) -> int:
+        settings = self.load_settings()
+        return settings.get('num_results', 3)  # Default to 3 if not found
+
+    def get_use_cpu_setting(self) -> bool:
+        settings = self.load_settings()
+        return settings.get('use_cpu', False)  # Default to False if not found
+
+    def save_settings(self):
+        num_results = self.num_results_input.value()
+        use_cpu = self.cpu_checkbox.isChecked()
+
+        settings = {
+            "num_results": num_results,
+            "use_cpu": use_cpu
+        }
+
+        os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+        with open(self.settings_file, 'w') as file:
+            json.dump(settings, file)
+
+        QMessageBox.information(self, "Settings", "Settings have been saved successfully.")
+
+    def load_settings(self) -> dict:
         if os.path.exists(self.settings_file):
             with open(self.settings_file, 'r') as file:
                 try:
-                    settings_file = json.load(file)
-                    num_results = settings_file.get('num_results', 3)  # Default to 3 if not found
+                    return json.load(file)
                 except json.JSONDecodeError:
-                    num_results = 3
-        else:
-            num_results = 3
-        return num_results
+                    return {}
+        return {}
 
-    def save_num_results(self):
-        num: int = self.num_results_input.value()
-        os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
-        with open(self.settings_file, 'w') as file:
-            num_results_dict = {"num_results": num}
-            json.dump(num_results_dict, file)
-        QMessageBox.information(self, "Settings", "Settings have been saved successfully.")
 
 if __name__ == '__main__':
     import sys
+
     app = QApplication(sys.argv)
     dialog = SettingsDialog()
     dialog.exec()

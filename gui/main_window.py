@@ -1,28 +1,12 @@
-import os
-import platform
-
 from PyQt6.QtGui import QPixmap, QIcon, QCursor, QMovie
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog, QListWidget, \
     QListWidgetItem, QHBoxLayout, QMessageBox, QMenu, QApplication
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThreadPool, QRunnable, pyqtSignal, QObject
+import os
+import platform
 
 from search_engine.clip_search_engine import SearchEngine
 from gui.settings_dialog import SettingsDialog
-
-
-class ImageSearchThread(QThread):
-    search_complete = pyqtSignal(list)
-
-    def __init__(self, search_engine, directory, search_phrase, top_k):
-        super().__init__()
-        self.search_engine = search_engine
-        self.directory = directory
-        self.search_phrase = search_phrase
-        self.top_k = top_k
-
-    def run(self):
-        results = self.search_engine.search_images(self.directory, self.search_phrase, top_k=self.top_k)
-        self.search_complete.emit(results)
 
 
 class MainWindow(QMainWindow):
@@ -77,8 +61,11 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addLayout(self.top_layout)
 
-        self.search_engine = SearchEngine()
+        self.threadpool = QThreadPool()
+
         self.num_results = self.get_num_results_setting()
+        self.use_cpu = self.get_use_cpu_setting()
+        self.search_engine = SearchEngine(use_cpu=self.use_cpu)
 
     def browse_directory(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -99,13 +86,13 @@ class MainWindow(QMainWindow):
             self.result_list.addItem("Please enter a search phrase.")
             return
 
-        self.result_list.clear()
         self.loading_label.setVisible(True)
         self.loading_movie.start()
+        self.result_list.clear()
 
-        self.search_thread = ImageSearchThread(self.search_engine, directory, search_phrase, top_k=self.num_results)
-        self.search_thread.search_complete.connect(self.display_results)
-        self.search_thread.start()
+        worker = ImageSearchWorker(self.search_engine, directory, search_phrase, self.num_results)
+        worker.signals.results_ready.connect(self.display_results)
+        self.threadpool.start(worker)
 
     def display_results(self, results):
         self.loading_movie.stop()
@@ -145,7 +132,39 @@ class MainWindow(QMainWindow):
         dialog = SettingsDialog(parent=self)
         if dialog.exec():
             self.num_results = self.get_num_results_setting()
+            self.use_cpu = self.get_use_cpu_setting()
+            self.search_engine = SearchEngine(use_cpu=self.use_cpu)
 
     def get_num_results_setting(self):
         settings_dialog = SettingsDialog()
         return settings_dialog.get_num_results_data()
+
+    def get_use_cpu_setting(self):
+        settings_dialog = SettingsDialog()
+        return settings_dialog.get_use_cpu_setting()
+
+
+class ImageSearchWorker(QRunnable):
+    class Signals(QObject):
+        results_ready = pyqtSignal(list)
+
+    def __init__(self, search_engine, directory, search_phrase, top_k):
+        super().__init__()
+        self.search_engine = search_engine
+        self.directory = directory
+        self.search_phrase = search_phrase
+        self.top_k = top_k
+        self.signals = self.Signals()
+
+    def run(self):
+        results = self.search_engine.search_images(self.directory, self.search_phrase, top_k=self.top_k)
+        self.signals.results_ready.emit(results)
+
+
+if __name__ == '__main__':
+    import sys
+
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
