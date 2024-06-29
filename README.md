@@ -33,6 +33,6 @@ pip install -r requirements.txt
 1. **Selecting Directory:** Click on the "Browse" button to select a directory containing images.
 2. **Entering Search Phrase:** Enter a search phrase in the provided input box.
 3. **Searching:** Click on the "Search" button to find the top matching images.
-4. **Adjusting Settings:** Click on the "Settings" button to adjust the number of results displayed.
+4. **Adjusting Settings:** Click on the "Settings" button to adjust the number of results displayed. If you have a CUDA enabled GPU, you can toggle the use of it on or off (on by default).
 5. **Finding a file in file manager:** For Mac OS and Windows, left click to open the file manager on your device and jump to the file.
 for other OSs, right click and select "Copy" to copy the path from the results list.
