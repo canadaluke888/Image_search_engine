@@ -36,3 +36,23 @@ pip install -r requirements.txt
 4. **Adjusting Settings:** Click on the "Settings" button to adjust the number of results displayed. If you have a CUDA enabled GPU, you can toggle the use of it on or off (on by default).
 5. **Finding a file in file manager:** For Mac OS and Windows, left click to open the file manager on your device and jump to the file.
 for other OSs, right click and select "Copy" to copy the path from the results list.
+
+## Tests
+
+**Number of Images:** 100 - 1920x1080
+
+### CPU
+
+**Testing Specs:** Intel Core i5 3570 3.4Ghz
+
+**Processing Time:** 11.62 Seconds
+
+### GPU
+
+**Testing Specs:** NVIDIA GeForce GTX 1050 Ti 4GB VRAM
+
+**Processing Time:** 6.80 Seconds
+
+
+## Acknowledgments
+[openai / CLIP](https://github.com/openai/CLIP.git)
