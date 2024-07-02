@@ -1,0 +1,8 @@
+CLIP/model/config.json filter=lfs diff=lfs merge=lfs -text
+CLIP/processor/merges.txt filter=lfs diff=lfs merge=lfs -text
+CLIP/model/model.safetensors filter=lfs diff=lfs merge=lfs -text
+CLIP/processor/preprocessor_config.json filter=lfs diff=lfs merge=lfs -text
+CLIP/processor/special_tokens_map.json filter=lfs diff=lfs merge=lfs -text
+CLIP/processor/tokenizer.json filter=lfs diff=lfs merge=lfs -text
+CLIP/processor/vocab.json filter=lfs diff=lfs merge=lfs -text
+CLIP/processor/tokenizer_config.json filter=lfs diff=lfs merge=lfs -text

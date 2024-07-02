@@ -10,13 +10,15 @@ logger = logging.getLogger(__name__)
 
 
 class SearchEngine:
-    def __init__(self, use_cpu=False):
+    def __init__(self, use_cpu=False, model_directory='CLIP/model', processor_directory='CLIP/processor'):
         """
         Initialize the CLIP model and processor.
         """
+        self.model_directory = model_directory
+        self.processor_directory = processor_directory
         self.device = torch.device('cpu' if use_cpu or not torch.cuda.is_available() else 'cuda')
-        self.model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32').to(self.device)
-        self.processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
+        self.model = CLIPModel.from_pretrained(self.model_directory).to(self.device)  # openai/clip-vit-base-patch32
+        self.processor = CLIPProcessor.from_pretrained(self.processor_directory)  # openai/clip-vit-base-patch32
 
     def load_and_process_images(self, directory):
         """
